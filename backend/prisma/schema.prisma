@@ -70,6 +70,7 @@ model User {
   role         Role      @default(CUSTOMER)
   firstName    String?   @map("first_name") @db.VarChar(100)
   lastName     String?   @map("last_name") @db.VarChar(100)
+  phoneNumber  String?   @unique @map("phone_number") @db.VarChar(20)
   birthday     DateTime? @db.Date
   createdAt    DateTime  @default(now()) @map("created_at")
 
@@ -256,10 +257,11 @@ model Order {
   status         OrderStatus   @default(PENDING)
   paymentMethod  PaymentMethod @map("payment_method")
   paymentStatus  PaymentStatus @default(PENDING) @map("payment_status")
-  shippingFee    Decimal       @default(0) @map("shipping_fee") @db.Decimal(10, 2)
-  pointsDiscount Decimal       @default(0) @map("points_discount") @db.Decimal(10, 2)
-  couponDiscount Decimal       @default(0) @map("coupon_discount") @db.Decimal(10, 2)
-  finalAmount    Decimal       @default(0) @map("final_amount") @db.Decimal(10, 2)
+  shippingFee       Decimal       @default(0) @map("shipping_fee") @db.Decimal(10, 2)
+  paymentMethodFee  Decimal       @default(0) @map("payment_method_fee") @db.Decimal(10, 2)
+  pointsDiscount    Decimal       @default(0) @map("points_discount") @db.Decimal(10, 2)
+  couponDiscount    Decimal       @default(0) @map("coupon_discount") @db.Decimal(10, 2)
+  finalAmount       Decimal       @default(0) @map("final_amount") @db.Decimal(10, 2)
   trackingNumber String?       @map("tracking_number") @db.VarChar(100)
   createdAt      DateTime      @default(now()) @map("created_at")
 

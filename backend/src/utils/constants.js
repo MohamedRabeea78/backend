@@ -40,6 +40,10 @@ const POINTS_PER_EGP = 1;
 // EGP discount per loyalty point redeemed
 const EGP_PER_POINT = 0.5;
 
+// ── Payment Fees ──────────────────────────────
+// Extra % charged when paying by CARD (e.g. 3 = 3%)
+const CARD_FEE_PERCENTAGE = 3;
+
 // ── Campaigns ─────────────────────────────────
 const CAMPAIGN_SCOPE = Object.freeze({
   PRODUCTS: 'PRODUCTS',
@@ -66,6 +70,7 @@ module.exports = {
   LOYALTY_REASON,
   POINTS_PER_EGP,
   EGP_PER_POINT,
+  CARD_FEE_PERCENTAGE,
   CAMPAIGN_SCOPE,
   DISCOUNT_TYPE,
   DEFAULT_PAGE,
