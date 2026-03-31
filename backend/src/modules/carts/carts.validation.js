@@ -1,23 +1,25 @@
-const j = require('joi');
+const { z } = require('zod');
 
-const addItem = {
-    body: j.object().keys({
-        vId: j.string().guid().required(),
-        q: j.number().integer().min(1).default(1)
-    })
-};
+const addItemSchema = z.object({
+  body: z.object({
+    variantId: z.string().uuid(),
+    quantity: z.number().int().min(1).default(1),
+  }),
+});
 
-const updateItem = {
-    body: j.object().keys({
-        vId: j.string().guid().required(),
-        q: j.number().integer().min(1).required()
-    })
-};
+const updateItemSchema = z.object({
+  params: z.object({
+    variantId: z.string().uuid(),
+  }),
+  body: z.object({
+    quantity: z.number().int().min(1),
+  }),
+});
 
-const removeItem = {
-    params: j.object().keys({
-        vId: j.string().guid().required()
-    })
-};
+const removeItemSchema = z.object({
+  params: z.object({
+    variantId: z.string().uuid(),
+  }),
+});
 
-module.exports = { addItem, updateItem, removeItem };
+module.exports = { addItemSchema, updateItemSchema, removeItemSchema };

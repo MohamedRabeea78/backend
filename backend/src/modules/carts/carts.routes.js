@@ -1,14 +1,17 @@
-const r = require('express').Router();
-const c = require('./cart.controller');
-const v = require('./cart.validation');
+const { Router } = require('express');
+const cartsController = require('./carts.controller');
 const validate = require('../../middlewares/validate.middleware');
-const auth = require('../../middlewares/auth.middleware');
+const { authenticate } = require('../../middlewares/auth.middleware');
+const { addItemSchema, updateItemSchema, removeItemSchema } = require('./carts.validation');
 
-r.use(auth);
+const router = Router();
 
-r.get('/', c.getCart);
-r.post('/add', validate(v.addItem), c.addItem);
-r.patch('/update', validate(v.updateItem), c.updateItem);
-r.delete('/:vId', validate(v.removeItem), c.removeItem);
+router.use(authenticate);
 
-module.exports = r;
+router.get('/', cartsController.getCart);
+router.post('/items', validate(addItemSchema), cartsController.addItem);
+router.patch('/items/:variantId', validate(updateItemSchema), cartsController.updateItem);
+router.delete('/items/:variantId', validate(removeItemSchema), cartsController.removeItem);
+router.delete('/', cartsController.clearCart);
+
+module.exports = router;

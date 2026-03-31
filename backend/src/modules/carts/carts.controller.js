@@ -1,26 +1,30 @@
-const s = require('./cart.service');
-const catchAsync = require('../../middlewares/asyncHandler');
+const asyncHandler = require('../../middlewares/asyncHandler');
+const cartsService = require('./carts.service');
+const ApiResponse = require('../../utils/ApiResponse');
 
-const getCart = catchAsync(async (req, res) => {
-    const c = await s.get(req.user.id);
-    res.json({ success: true, data: c });
+const getCart = asyncHandler(async (req, res) => {
+  const data = await cartsService.getOrCreateCart(req.user.id);
+  return ApiResponse.success(res, 'Cart fetched', data);
 });
 
-const addItem = catchAsync(async (req, res) => {
-    const { vId, q } = req.body;
-    const i = await s.add(req.user.id, vId, q || 1);
-    res.json({ success: true, data: i });
+const addItem = asyncHandler(async (req, res) => {
+  const data = await cartsService.addItem(req.user.id, req.validated.body);
+  return ApiResponse.success(res, 'Item added to cart', data);
 });
 
-const updateItem = catchAsync(async (req, res) => {
-    const { vId, q } = req.body;
-    const i = await s.update(req.user.id, vId, q);
-    res.json({ success: true, data: i });
+const updateItem = asyncHandler(async (req, res) => {
+  const data = await cartsService.updateItem(req.user.id, req.params.variantId, req.validated.body.quantity);
+  return ApiResponse.success(res, 'Cart item updated', data);
 });
 
-const removeItem = catchAsync(async (req, res) => {
-    await s.remove(req.user.id, req.params.vId);
-    res.json({ success: true, message: 'Item removed' });
+const removeItem = asyncHandler(async (req, res) => {
+  const data = await cartsService.removeItem(req.user.id, req.params.variantId);
+  return ApiResponse.success(res, 'Item removed from cart', data);
 });
 
-module.exports = { getCart, addItem, updateItem, removeItem };
+const clearCart = asyncHandler(async (req, res) => {
+  const data = await cartsService.clearCart(req.user.id);
+  return ApiResponse.success(res, 'Cart cleared', data);
+});
+
+module.exports = { getCart, addItem, updateItem, removeItem, clearCart };
