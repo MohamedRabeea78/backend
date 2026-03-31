@@ -6,6 +6,16 @@ const { createProductSchema, updateProductSchema, createVariantSchema, idParamSc
 
 const router = Router();
 
+/**
+ * @swagger
+ * /api/v1/products:
+ *   get:
+ *     summary: Get all products
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: List of products fetched successfully
+ */
 router.get('/', productsController.getAll);
 router.get('/:id', validate(idParamSchema), productsController.getById);
 
