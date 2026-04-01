@@ -1,0 +1,317 @@
+// Furniture E-Commerce — Prisma Schema
+// Converted from DBML
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum CampaignScope {
+  PRODUCTS
+  CATEGORY
+  ALL_ORDERS
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  CARD
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum LoyaltyReason {
+  EARN_ORDER
+  REDEEM
+  MANUAL_ADJUST
+}
+
+// ─────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash")
+  role         Role      @default(CUSTOMER)
+  firstName    String?   @map("first_name") @db.VarChar(100)
+  lastName     String?   @map("last_name") @db.VarChar(100)
+  phoneNumber  String?   @unique @map("phone_number") @db.VarChar(20)
+  birthday     DateTime? @db.Date
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  cart                Cart?                @relation(onDelete: Cascade)
+  addresses           Address[]            @relation(onDelete: Cascade)
+  orders              Order[]              @relation(onDelete: Cascade)
+  reviews             Review[]             @relation(onDelete: Cascade)
+  loyaltyPoints       LoyaltyPoints?       @relation(onDelete: Cascade)
+  loyaltyTransactions LoyaltyTransaction[] @relation(onDelete: Cascade)
+
+  @@map("users")
+}
+
+model Category {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameAr   String  @map("name_ar") @db.VarChar(255)
+  nameEn   String  @map("name_en") @db.VarChar(255)
+  parentId String? @map("parent_id") @db.Uuid
+
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryHierarchy")
+  products  Product[]  @relation(onDelete: Cascade)
+  campaigns Campaign[] @relation(onDelete: Cascade)
+
+  @@map("categories")
+}
+
+model Product {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId    String? @map("category_id") @db.Uuid
+  nameAr        String  @map("name_ar") @db.VarChar(255)
+  nameEn        String  @map("name_en") @db.VarChar(255)
+  descriptionAr String? @map("description_ar")
+  descriptionEn String? @map("description_en")
+  basePrice     Decimal @default(0) @map("base_price") @db.Decimal(10, 2)
+  isActive      Boolean @default(true) @map("is_active")
+
+  category         Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants         ProductVariant[]  @relation(onDelete: Cascade)
+  reviews          Review[]          @relation(onDelete: Cascade)
+  campaignProducts CampaignProduct[] @relation(onDelete: Cascade)
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId     String  @map("product_id") @db.Uuid
+  sku           String  @unique @db.VarChar(100)
+  color         String? @db.VarChar(100)
+  size          String? @db.VarChar(50)
+  priceModifier Decimal @default(0) @map("price_modifier") @db.Decimal(10, 2)
+  stockQuantity Int     @default(0) @map("stock_quantity")
+  images        Json    @default("[]")
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]  @relation(onDelete: Cascade)
+  orderItems OrderItem[] @relation(onDelete: Cascade)
+
+  @@map("product_variants")
+}
+
+model Cart {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[] @relation(onDelete: Cascade)
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cartId    String @map("cart_id") @db.Uuid
+  variantId String @map("variant_id") @db.Uuid
+  quantity  Int    @default(1)
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@map("cart_items")
+}
+
+model ShippingRegion {
+  id            Int     @id @default(autoincrement())
+  regionName    String  @map("region_name") @db.VarChar(255)
+  shippingFee   Decimal @default(0) @map("shipping_fee") @db.Decimal(10, 2)
+  estimatedDays Int     @default(1) @map("estimated_days")
+
+  addresses Address[]
+
+  @@map("shipping_regions")
+}
+
+model Address {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  regionId       Int     @map("region_id")
+  addressDetails String  @map("address_details")
+  isPrimary      Boolean @default(false) @map("is_primary")
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shippingRegion ShippingRegion @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  orders         Order[]        @relation(onDelete: Restrict)
+
+  @@map("addresses")
+}
+
+model Campaign {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title              String        @db.VarChar(255)
+  bannerUrl          String?       @map("banner_url")
+  discountPercentage Decimal       @map("discount_percentage") @db.Decimal(5, 2)
+  scope              CampaignScope @default(PRODUCTS)
+  categoryId         String?       @map("category_id") @db.Uuid
+  startDate          DateTime      @map("start_date")
+  endDate            DateTime      @map("end_date")
+  isActive           Boolean       @default(true) @map("is_active")
+
+  category         Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  campaignProducts CampaignProduct[] @relation(onDelete: Cascade)
+
+  @@map("campaigns")
+}
+
+model CampaignProduct {
+  campaignId String @map("campaign_id") @db.Uuid
+  productId  String @map("product_id") @db.Uuid
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, productId])
+  @@map("campaign_products")
+}
+
+model Coupon {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String       @unique @db.VarChar(50)
+  discountType   DiscountType @map("discount_type")
+  discountValue  Decimal      @map("discount_value") @db.Decimal(10, 2)
+  minOrderAmount Decimal      @default(0) @map("min_order_amount") @db.Decimal(10, 2)
+  maxUses        Int?         @map("max_uses")
+  usedCount      Int          @default(0) @map("used_count")
+  expiresAt      DateTime?    @map("expires_at")
+  isActive       Boolean      @default(true) @map("is_active")
+
+  orders Order[] @relation(onDelete: SetNull)
+
+  @@map("coupons")
+}
+
+model LoyaltyPoints {
+  userId         String @id @map("user_id") @db.Uuid
+  currentBalance Int    @default(0) @map("current_balance")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("loyalty_points")
+}
+
+model LoyaltyTransaction {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  orderId      String?       @map("order_id") @db.Uuid
+  changeAmount Int           @map("change_amount")
+  reason       LoyaltyReason
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("loyalty_transactions")
+}
+
+model Order {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  addressId      String        @map("address_id") @db.Uuid
+  couponId       String?       @map("coupon_id") @db.Uuid
+  status         OrderStatus   @default(PENDING)
+  paymentMethod  PaymentMethod @map("payment_method")
+  paymentStatus  PaymentStatus @default(PENDING) @map("payment_status")
+  shippingFee       Decimal       @default(0) @map("shipping_fee") @db.Decimal(10, 2)
+  paymentMethodFee  Decimal       @default(0) @map("payment_method_fee") @db.Decimal(10, 2)
+  pointsDiscount    Decimal       @default(0) @map("points_discount") @db.Decimal(10, 2)
+  couponDiscount    Decimal       @default(0) @map("coupon_discount") @db.Decimal(10, 2)
+  finalAmount       Decimal       @default(0) @map("final_amount") @db.Decimal(10, 2)
+  trackingNumber String?       @map("tracking_number") @db.VarChar(100)
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  address             Address              @relation(fields: [addressId], references: [id], onDelete: Restrict)
+  coupon              Coupon?              @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items               OrderItem[]          @relation(onDelete: Cascade)
+  statusHistory       OrderStatusHistory[] @relation(onDelete: Cascade)
+  loyaltyTransactions LoyaltyTransaction[] @relation(onDelete: Cascade)
+
+  @@map("orders")
+}
+
+model OrderItem {
+  orderId         String  @map("order_id") @db.Uuid
+  variantId       String  @map("variant_id") @db.Uuid
+  quantity        Int
+  priceAtPurchase Decimal @map("price_at_purchase") @db.Decimal(10, 2)
+
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@id([orderId, variantId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId   String      @map("order_id") @db.Uuid
+  status    OrderStatus
+  comment   String?
+  changedAt DateTime    @default(now()) @map("changed_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_status_history")
+}
+
+model Review {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId    String   @map("product_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  rating       Int
+  comment      String?
+  reviewImages Json     @default("[]") @map("review_images")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@map("reviews")
+}
