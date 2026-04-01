@@ -2,6 +2,11 @@ const prisma = require('../../config/prisma');
 const ApiError = require('../../utils/ApiError');
 
 const createCategory = async (data) => {
+  if (data.parentId) {
+    const parent = await prisma.category.findUnique({ where: { id: data.parentId } });
+    if (!parent) throw ApiError.notFound('Parent category not found');
+  }
+
   return await prisma.category.create({
     data,
     include: {
@@ -37,6 +42,11 @@ const getCategoryById = async (id) => {
 
 const updateCategory = async (id, data) => {
   await getCategoryById(id);
+  
+  if (data.parentId && data.parentId !== null) {
+    const parent = await prisma.category.findUnique({ where: { id: data.parentId } });
+    if (!parent) throw ApiError.notFound('Parent category not found');
+  }
   
   return await prisma.category.update({
     where: { id },

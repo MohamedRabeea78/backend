@@ -27,6 +27,9 @@ const changePassword = async (userId, { currentPassword, newPassword }) => {
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) throw ApiError.badRequest('Current password is incorrect');
 
+  const isSamePassword = await bcrypt.compare(newPassword, user.passwordHash);
+  if (isSamePassword) throw ApiError.badRequest('New password must be different from current password');
+
   const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
   return prisma.user.update({
     where: { id: userId },

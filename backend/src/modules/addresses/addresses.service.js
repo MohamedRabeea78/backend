@@ -25,6 +25,11 @@ const update = async (userId, id, data) => {
   const address = await prisma.address.findUnique({ where: { id } });
   if (!address || address.userId !== userId) throw ApiError.notFound('Address not found');
 
+  if (data.regionId) {
+    const region = await prisma.shippingRegion.findUnique({ where: { id: data.regionId } });
+    if (!region) throw ApiError.notFound('Shipping region not found');
+  }
+
   if (data.isPrimary) {
     await prisma.address.updateMany({
       where: { userId },

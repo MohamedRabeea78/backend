@@ -14,14 +14,24 @@ const getTransactions = async (userId) => {
 };
 
 const adjustPoints = async ({ userId, amount, reason }) => {
+  const validReasons = ['EARN_ORDER', 'REDEEM', 'MANUAL_ADJUST'];
+  if (!validReasons.includes(reason)) {
+    throw ApiError.badRequest('Invalid reason for points adjustment');
+  }
+
   return prisma.$transaction(async (tx) => {
-    const loyalty = await tx.loyaltyPoints.upsert({
+    let loyalty = await tx.loyaltyPoints.findUnique({ where: { userId } });
+    const newBalance = (loyalty?.currentBalance || 0) + amount;
+
+    if (newBalance < 0) {
+      throw ApiError.badRequest(`Insufficient balance. You have ${loyalty?.currentBalance || 0} points`);
+    }
+
+    loyalty = await tx.loyaltyPoints.upsert({
       where: { userId },
       update: { currentBalance: { increment: amount } },
-      create: { userId, currentBalance: amount },
+      create: { userId, currentBalance: Math.max(0, amount) },
     });
-
-    if (loyalty.currentBalance < 0) throw ApiError.badRequest('Insufficient balance');
 
     await tx.loyaltyTransaction.create({
       data: { userId, changeAmount: amount, reason },

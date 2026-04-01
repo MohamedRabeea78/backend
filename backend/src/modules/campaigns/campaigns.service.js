@@ -29,9 +29,23 @@ const create = async (data) => {
 };
 
 const update = async (id, data) => {
+  const campaign = await prisma.campaign.findUnique({ where: { id } });
+  if (!campaign) throw ApiError.notFound('Campaign not found');
+  
+  const { productIds, ...campaignData } = data;
+  const updateData = { ...campaignData };
+  
+  if (Array.isArray(productIds) && productIds.length > 0) {
+    await prisma.campaignProduct.deleteMany({ where: { campaignId: id } });
+    updateData.campaignProducts = {
+      create: productIds.map(productId => ({ productId }))
+    };
+  }
+  
   return prisma.campaign.update({
     where: { id },
-    data
+    data: updateData,
+    include: { campaignProducts: { include: { product: true } }, category: true },
   });
 };
 

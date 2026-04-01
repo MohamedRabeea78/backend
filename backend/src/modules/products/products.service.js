@@ -2,7 +2,10 @@ const prisma = require('../../config/prisma');
 const ApiError = require('../../utils/ApiError');
 
 const getAll = async ({ page = 1, limit = 10, categoryId, isActive } = {}) => {
-  const skip = (page - 1) * limit;
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 10));
+  const skip = (pageNum - 1) * limitNum;
+  
   const where = {};
   if (categoryId) where.categoryId = categoryId;
   if (isActive !== undefined) where.isActive = isActive;
@@ -11,7 +14,7 @@ const getAll = async ({ page = 1, limit = 10, categoryId, isActive } = {}) => {
     prisma.product.findMany({
       where,
       skip,
-      take: limit,
+      take: limitNum,
       include: {
         category: true,
         variants: true,
@@ -20,7 +23,7 @@ const getAll = async ({ page = 1, limit = 10, categoryId, isActive } = {}) => {
     prisma.product.count({ where }),
   ]);
 
-  return { products, total, page, limit };
+  return { products, total, page: pageNum, limit: limitNum };
 };
 
 const getById = async (id) => {
@@ -62,6 +65,10 @@ const remove = async (id) => {
 const createVariant = async (productId, data) => {
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) throw ApiError.notFound('Product not found');
+
+  const existingSku = await prisma.productVariant.findUnique({ where: { sku: data.sku } });
+  if (existingSku) throw ApiError.conflict('This SKU already exists');
+
   return prisma.productVariant.create({
     data: { ...data, productId },
   });

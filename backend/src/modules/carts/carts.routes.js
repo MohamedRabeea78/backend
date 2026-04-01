@@ -2,7 +2,7 @@ const { Router } = require('express');
 const cartsController = require('./carts.controller');
 const validate = require('../../middlewares/validate.middleware');
 const { authenticate } = require('../../middlewares/auth.middleware');
-const { addItemSchema, updateItemSchema, removeItemSchema } = require('./carts.validation');
+const { addItemSchema, updateItemSchema, removeItemSchema, mergeCartSchema } = require('./carts.validation');
 
 const router = Router();
 
@@ -13,14 +13,18 @@ const router = Router();
  *   description: Shopping cart management
  */
 
-router.use(authenticate);
-
 /**
  * @swagger
  * /api/v1/carts:
  *   get:
- *     summary: Get current user's cart
+ *     summary: Get current user's cart (requires auth) or guest cart (from guestId)
  *     tags: [Cart]
+ *     parameters:
+ *       - in: query
+ *         name: guestId
+ *         schema:
+ *           type: string
+ *         description: Guest ID (optional, for unauthenticated users)
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -35,10 +39,14 @@ router.get('/', cartsController.getCart);
  * @swagger
  * /api/v1/carts/items:
  *   post:
- *     summary: Add item to cart
+ *     summary: Add item to cart (works for authenticated AND guest users)
  *     tags: [Cart]
- *     security:
- *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: guestId
+ *         schema:
+ *           type: string
+ *         description: Guest ID (required if not authenticated)
  *     requestBody:
  *       required: true
  *       content:
@@ -61,17 +69,19 @@ router.get('/', cartsController.getCart);
  *       201:
  *         description: Item added to cart successfully
  *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
+ *         description: Invalid input or insufficient stock
+ *       404:
+ *         description: Variant not found
  */
 router.post('/items', validate(addItemSchema), cartsController.addItem);
+
+router.use(authenticate);
 
 /**
  * @swagger
  * /api/v1/carts/items/{variantId}:
  *   patch:
- *     summary: Update item quantity in cart
+ *     summary: Update item quantity in cart (authenticated only)
  *     tags: [Cart]
  *     security:
  *       - BearerAuth: []
@@ -112,7 +122,7 @@ router.patch('/items/:variantId', validate(updateItemSchema), cartsController.up
  * @swagger
  * /api/v1/carts/items/{variantId}:
  *   delete:
- *     summary: Remove item from cart
+ *     summary: Remove item from cart (authenticated only)
  *     tags: [Cart]
  *     security:
  *       - BearerAuth: []
@@ -138,7 +148,7 @@ router.delete('/items/:variantId', validate(removeItemSchema), cartsController.r
  * @swagger
  * /api/v1/carts:
  *   delete:
- *     summary: Clear entire cart
+ *     summary: Clear entire cart (authenticated only)
  *     tags: [Cart]
  *     security:
  *       - BearerAuth: []
@@ -149,5 +159,48 @@ router.delete('/items/:variantId', validate(removeItemSchema), cartsController.r
  *         description: Unauthorized
  */
 router.delete('/', cartsController.clearCart);
+
+/**
+ * @swagger
+ * /api/v1/carts/merge:
+ *   post:
+ *     summary: Merge guest cart items into authenticated user's cart
+ *     tags: [Cart]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - variantId
+ *                     - quantity
+ *                   properties:
+ *                     variantId:
+ *                       type: string
+ *                       format: uuid
+ *                     quantity:
+ *                       type: integer
+ *                       minimum: 1
+ *             example:
+ *               items:
+ *                 - variantId: "123e4567-e89b-12d3-a456-426614174000"
+ *                   quantity: 2
+ *     responses:
+ *       200:
+ *         description: Guest cart merged successfully
+ *       401:
+ *         description: Unauthorized
+ *       400:
+ *         description: Invalid input or insufficient stock
+ */
+router.post('/merge', validate(mergeCartSchema), cartsController.mergeCart);
 
 module.exports = router;

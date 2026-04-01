@@ -27,4 +27,10 @@ const clearCart = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, 'Cart cleared', data);
 });
 
-module.exports = { getCart, addItem, updateItem, removeItem, clearCart };
+const mergeCart = asyncHandler(async (req, res) => {
+  const guestCartItems = req.validated.body.items || [];
+  const data = await cartsService.mergeGuestCart(req.user.id, guestCartItems);
+  return ApiResponse.success(res, 'Guest cart merged successfully', data);
+});
+
+module.exports = { getCart, addItem, updateItem, removeItem, clearCart, mergeCart };

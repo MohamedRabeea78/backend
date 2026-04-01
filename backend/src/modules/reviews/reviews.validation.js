@@ -2,10 +2,20 @@ const { z } = require('zod');
 
 const createReviewSchema = z.object({
   body: z.object({
-    productId: z.string().uuid(),
-    rating: z.number().int().min(1).max(5),
-    comment: z.string().optional(),
-    reviewImages: z.array(z.string().url()).optional().default([]),
+    productId: z.string().uuid('Invalid product ID'),
+    rating: z.number()
+      .int('Rating must be an integer')
+      .min(1, 'Rating must be at least 1')
+      .max(5, 'Rating must not exceed 5'),
+    comment: z.string()
+      .max(1000, 'Comment must not exceed 1000 characters')
+      .optional(),
+    reviewImages: z.array(
+      z.string().url('Each image must be a valid URL')
+    )
+      .max(5, 'Maximum 5 images allowed')
+      .optional()
+      .default([]),
   }),
 });
 

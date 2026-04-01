@@ -2,8 +2,10 @@ const { z } = require('zod');
 
 const createAddressSchema = z.object({
   body: z.object({
-    regionId: z.number().int(),
-    addressDetails: z.string().min(1),
+    regionId: z.number().int().positive('Region ID must be a positive number'),
+    addressDetails: z.string()
+      .min(5, 'Address must be at least 5 characters')
+      .max(500, 'Address must not exceed 500 characters'),
     isPrimary: z.boolean().optional(),
   }),
 });
@@ -11,8 +13,11 @@ const createAddressSchema = z.object({
 const updateAddressSchema = z.object({
   params: z.object({ id: z.string().uuid() }),
   body: z.object({
-    regionId: z.number().int().optional(),
-    addressDetails: z.string().min(1).optional(),
+    regionId: z.number().int().positive('Region ID must be a positive number').optional(),
+    addressDetails: z.string()
+      .min(5, 'Address must be at least 5 characters')
+      .max(500, 'Address must not exceed 500 characters')
+      .optional(),
     isPrimary: z.boolean().optional(),
   }),
 });
